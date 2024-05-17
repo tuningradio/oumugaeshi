@@ -1,10 +1,10 @@
-﻿# オウム返しプログラム oumugaeshi.py Ver. 1.0(W) by JA1XPM & Microsoft Copilot 2024.05.03
+﻿# オウム返しプログラム oumugaeshi.py Ver. 1.2(W) by JA1XPM & Microsoft Copilot 2024.05.18
 # DTR コントロール版
 # プラットフォーム:windows11, python3
 # 仕様:無線機のオーディオ入出力に接続し、送信は指定したCOMポートのDTR、VOX、Signalinkの自動送信を利用
-# リグはUSBのオーディオ、DTR/RTS SENDが使えるものなら超簡単(IC-9700だと、USB SEND->USB(A)DTR選択、モードをDATAにする)
+# リグはUSBのオーディオとDTR SENDが使えるものなら超簡単(IC-9700だと、USB SEND->USB(A)DTR選択、モードをDATAにする)
 # 使い方: python oumugaeshi.py [COMn]
-# COMポートを指定しない場合は COM1 を強制選択
+# COMポートを指定しない場合は COMポート制御をしない(送受信切替はSignalink等のVOX系制御に依存する)
 # オーディオ入出力デバイスを数字で指定する
 # 終了は ctrl+c
 
@@ -28,9 +28,12 @@ def select_audio_device(device_type):
     return device
 
 # COMポートの設定
-com_port = sys.argv[1] if len(sys.argv) > 1 else 'COM1'  # 起動パラメータでCOMポートを指定
-ser = serial.Serial(com_port)  # COMポートを開く
-ser.setDTR(False)  # DTRを強制OFFにする
+com_port = sys.argv[1] if len(sys.argv) > 1 else None  # 起動パラメータでCOMポートを指定
+if com_port:
+    ser = serial.Serial(com_port)  # COMポートを開く
+    ser.setDTR(False)  # DTRを強制OFFにする
+else:
+    print("COMポートが指定されなかったので、DTR制御をしません.")
 
 p = pyaudio.PyAudio()
 
@@ -96,7 +99,8 @@ try:
         wf.close()
 
         print(datetime.now().strftime('%Y%m%d,%H:%M:%S'), " 録音した音声を再生します...")  # 時刻を先に表示
-        ser.setDTR(True)  # DTRをONにする
+        if com_port:
+            ser.setDTR(True)  # DTRをONにする
 
         # 音声ファイルの再生
         wf = wave.open(filename, 'rb')
@@ -123,9 +127,11 @@ try:
 
         p.terminate()
 
-        ser.setDTR(False)  # DTRをOFFにする
+        if com_port:
+            ser.setDTR(False)  # DTRをOFFにする
 except KeyboardInterrupt:
     # Ctrl+Cが押されたときの処理
     print(datetime.now().strftime('%Y%m%d,%H:%M:%S'), " プログラムを終了します...")
-    ser.setDTR(False)  # DTRをOFFにする
-    ser.close()  # COMポートを閉じる
+    if com_port:
+        ser.setDTR(False)  # DTRをOFFにする
+        ser.close()  # COMポートを閉じる
