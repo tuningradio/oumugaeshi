@@ -5,8 +5,11 @@ Windows11 +Python3.10.nで動作確認。
 30秒たつと録音は強制終了、強制再生される。
 30秒前に3秒の無音状態があると、録音は終了する。
 COMポートを起動パラメーターで指定すると、音声再生時にそのポートのDTRをONにします。音声再生が終了したらDTRをOFFにします。
+
 起動例：
+
 py oumugaeshi.py   (COMポートコントロール無し)
+
 py oumugaeshi.py COM1   (音声再生時COM1のDTRをONにする)
 
 終了はctrl+Cです。
