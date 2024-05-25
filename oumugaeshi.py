@@ -1,4 +1,4 @@
-﻿# オウム返しプログラム oumugaeshi.py Ver. 1.2(W) by JA1XPM & Microsoft Copilot 2024.05.18
+﻿# オウム返しプログラム oumugaeshi.py Ver.1.3(W) by JA1XPM & Microsoft Copilot 2024.05.25
 # DTR コントロール版
 # プラットフォーム:windows11, python3
 # 仕様:無線機のオーディオ入出力に接続し、送信は指定したCOMポートのDTR、VOX、Signalinkの自動送信を利用
@@ -7,6 +7,8 @@
 # COMポートを指定しない場合は COMポート制御をしない(送受信切替はSignalink等のVOX系制御に依存する)
 # オーディオ入出力デバイスを数字で指定する
 # 終了は ctrl+c
+# IDを送出機能追加。音声ファイル再生終了後にid.wavがあれば再生、無ければ再生しないようにした。
+
 
 import pyaudio
 import wave
@@ -127,8 +129,36 @@ try:
 
         p.terminate()
 
+        # id.wav の再生
+        try:
+            wf_id = wave.open("id.wav", 'rb')
+            stream_id = p.open(format=p.get_format_from_width(wf_id.getsampwidth()),
+                               channels=wf_id.getnchannels(),
+                               rate=wf_id.getframerate(),
+                               output=True,
+                               output_device_index=output_device)
+
+            data_id = wf_id.readframes(chunk)
+
+            while data_id != b'':
+                stream_id.write(data_id)
+                data_id = wf_id.readframes(chunk)
+
+            # 音声の再生が完全に終了するのを待つ
+            time.sleep(0.5)
+
+            stream_id.stop_stream()
+            stream_id.close()
+
+            wf_id.close()
+        except FileNotFoundError:
+            print("Error: id.wav not found.")
+        except Exception as e:
+            print("Error:", e)
+
         if com_port:
             ser.setDTR(False)  # DTRをOFFにする
+
 except KeyboardInterrupt:
     # Ctrl+Cが押されたときの処理
     print(datetime.now().strftime('%Y%m%d,%H:%M:%S'), " プログラムを終了します...")
