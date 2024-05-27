@@ -1,4 +1,4 @@
-﻿# オウム返しプログラム oumugaeshi.py Ver.1.3(W) by JA1XPM & Microsoft Copilot 2024.05.25
+﻿# オウム返しプログラム oumugaeshi.py Ver. 1.3.1(W) by JA1XPM & Microsoft Copilot 2024.05.27
 # DTR コントロール版
 # プラットフォーム:windows11, python3
 # 仕様:無線機のオーディオ入出力に接続し、送信は指定したCOMポートのDTR、VOX、Signalinkの自動送信を利用
@@ -7,7 +7,9 @@
 # COMポートを指定しない場合は COMポート制御をしない(送受信切替はSignalink等のVOX系制御に依存する)
 # オーディオ入出力デバイスを数字で指定する
 # 終了は ctrl+c
-# IDを送出機能追加。音声ファイル再生終了後にid.wavがあれば再生、無ければ再生しないようにした。
+#
+# Ver1.3 IDを送出機能追加。音声ファイル再生終了後にid.wavがあれば再生、無ければ再生しないようにした。
+# Ver1.3.1 録音したファイルの後ろにある無音時間(デフォルトで3秒)をカットするようにした。
 
 
 import pyaudio
@@ -53,7 +55,8 @@ rate = 15000  # サンプリングレートを15KHzに変更
 record_seconds = 30  # 録音時間（秒）
 silence_threshold = 500  # 無音と判断する閾値
 silence_duration = 3  # 無音が続く時間（秒）を定義
-filename = "record.wav"  # 音声ファイル名
+filename = "temp.wav"  # 受信音声ファイル名
+filename2 = "record.wav" # 送信音声ファイル名
 
 try:
     while True:  # メイン処理をループ
@@ -100,12 +103,31 @@ try:
         wf.writeframes(b''.join(frames))
         wf.close()
 
+        # 無音時間のカット
+        # wavファイルを読み込む
+        wav = wave.open(filename, 'r')
+
+        # wavファイルの情報を取得
+        framerate = wav.getframerate()
+        nframes = wav.getnframes()
+        duration = nframes / float(framerate)
+
+        # 最後の無音時間秒分のフレーム数を計算
+        last_seconds = int(framerate * silence_duration)
+
+        # 最後の無音時間秒分のデータを除いたデータを新しいwavファイルとして書き出す
+        wav_out = wave.open(filename2, 'w')
+        wav_out.setparams(wav.getparams())
+        wav_out.writeframes(wav.readframes(nframes - last_seconds))
+        wav_out.close()
+        wav.close()
+
         print(datetime.now().strftime('%Y%m%d,%H:%M:%S'), " 録音した音声を再生します...")  # 時刻を先に表示
         if com_port:
             ser.setDTR(True)  # DTRをONにする
 
         # 音声ファイルの再生
-        wf = wave.open(filename, 'rb')
+        wf = wave.open(filename2, 'rb')
 
         p = pyaudio.PyAudio()
 
@@ -165,3 +187,4 @@ except KeyboardInterrupt:
     if com_port:
         ser.setDTR(False)  # DTRをOFFにする
         ser.close()  # COMポートを閉じる
+
